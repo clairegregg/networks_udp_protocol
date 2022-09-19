@@ -13,7 +13,7 @@ ingressAddressPort = ("", 20001)
 UDPWorkerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
 # Declare worker
-bytesToSend = 0b10.to_bytes(1, 'big') + fromWorkerDeclarationMask.to_bytes(1, 'big') + str.encode("Worker being declared")
+bytesToSend = 0b10.to_bytes(1, 'big') + fromWorkerDeclarationMask.to_bytes(1, 'big') + str.encode("Worker declaring itself to ingress")
 UDPWorkerSocket.sendto(bytesToSend, ingressAddressPort)
 
 print("Worker UDP server up and listening")
@@ -30,5 +30,5 @@ while True:
     print(ingressIP)
 
     # Sending a reply to ingress
-    bytesToSend = 0b11.to_bytes(1, 'big') + fromWorkerMask.to_bytes(1, 'big') + message[2].to_bytes(1, 'big') + str.encode("Successful return to UDP ingress")
+    bytesToSend = 0b11.to_bytes(1, 'big') + fromWorkerMask.to_bytes(1, 'big') + message[2].to_bytes(1, 'big') + str.encode("Worker sending response back to ingress")
     UDPWorkerSocket.sendto(bytesToSend, ingressAddressPort)

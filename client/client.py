@@ -7,7 +7,7 @@ fromWorkerDeclarationMask = 0b101
 fromIngressMask = 0b10
 bufferSize = 1024
 
-bytesToSend = str.encode(str(0b10) + str(fromClientMask) + "Hello UDP Server")
+bytesToSend = 0b10.to_bytes(1, 'big') + fromClientMask.to_bytes(1, 'big') + str.encode("Client requesting file")
 
 # Empty IP number, assigned by Docker
 serverAddressPort = ("", 20001)

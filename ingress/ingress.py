@@ -38,7 +38,7 @@ while True:
         if no_workers:
             print("no_workers")
         worker = random.choice(workers) # select worker
-        bytesToSend = 0b11.to_bytes(1, 'big') + fromIngressMask.to_bytes(1, 'big') + (len(clients)-1).to_bytes(1, 'big') + str.encode("Hello UDP worker")
+        bytesToSend = 0b11.to_bytes(1, 'big') + fromIngressMask.to_bytes(1, 'big') + (len(clients)-1).to_bytes(1, 'big') + str.encode("Ingress passing along file request")
         UDPServerSocket.sendto(bytesToSend, worker)
 
     # if message is from worker
@@ -61,4 +61,4 @@ while True:
             print("ERROR INVALID CLIENT")
             continue
         # Sending a reply to the client
-        UDPServerSocket.sendto(str.encode("Successful return to UDP client"), clients[client])
+        UDPServerSocket.sendto(str.encode("Ingress returning response to client"), clients[client])

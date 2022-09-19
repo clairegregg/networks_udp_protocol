@@ -10,6 +10,7 @@ services:
     network_mode: "host"
     depends_on:
       - ingress
+      - worker
 
     deploy:
       mode: replicated
@@ -24,3 +25,9 @@ services:
     deploy:
       mode: replicated
       replicas: 3
+
+  tcpdump:
+    image: kaazing/tcpdump
+    network_mode: "host"
+    volumes:
+      - ./tcpdump:/tcpdump
