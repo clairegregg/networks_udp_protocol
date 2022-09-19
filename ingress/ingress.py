@@ -34,9 +34,12 @@ while True:
         print(msg)
         print(IP)
         clients.append(address)
-        #worker = random.choice(workers) # select worker
+        no_workers = len(workers) < 1
+        if no_workers:
+            print("no_workers")
+        worker = random.choice(workers) # select worker
         bytesToSend = 0b11.to_bytes(1, 'big') + fromIngressMask.to_bytes(1, 'big') + (len(clients)-1).to_bytes(1, 'big') + str.encode("Hello UDP worker")
-        UDPServerSocket.sendto(bytesToSend, workers[0])
+        UDPServerSocket.sendto(bytesToSend, worker)
 
     # if message is from worker
     elif message[1] & fromWorkerMask == fromWorkerMask:
@@ -48,7 +51,7 @@ while True:
             print(IP)
             continue
 
-        # message is from worker but not declaration
+        # message is from worker but is not declaration
         msg = "Message from worker: {}".format(message)
         IP = "Worker IP address: {}".format(address)
         print(msg)
