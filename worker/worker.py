@@ -1,30 +1,34 @@
 import socket
 
-localIP = ""
-localPort = 30001
+# common variables which i can't figure out how to import
+fromClientMask = 0b1000
+fromWorkerMask = 0b100
+fromWorkerDeclarationMask = 0b101
+fromIngressMask = 0b10
 bufferSize = 1024
 
-msgFromWorker = "Hello from UDP Worker"
-bytesToSend = str.encode(msgFromWorker)
+ingressAddressPort = ("", 20001)
 
 # Create a UDP socket
 UDPWorkerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
-# Bind socket to IP and port
-UDPWorkerSocket.bind((localIP, localPort))
+# Declare worker
+bytesToSend = 0b10.to_bytes(1, 'big') + fromWorkerDeclarationMask.to_bytes(1, 'big') + str.encode("Worker being declared")
+UDPWorkerSocket.sendto(bytesToSend, ingressAddressPort)
 
 print("Worker UDP server up and listening")
 
 # Listen for incoming messages
-While True:
+while True:
     bytesAddressPair = UDPWorkerSocket.recvfrom(bufferSize)
     message = bytesAddressPair[0]
     address = bytesAddressPair[1]
     msgFromIngress = "Message from ingress: {}".format(message)
-    ingressIP = "Ingress IP address: {}".format(message)
+    ingressIP = "Ingress IP address: {}".format(address)
 
     print(msgFromIngress)
     print(ingressIP)
 
-    # Sending a reply to the client
-    UDPWorkerSocket.sendto(bytesToSend, address)
+    # Sending a reply to ingress
+    bytesToSend = 0b11.to_bytes(1, 'big') + fromWorkerMask.to_bytes(1, 'big') + message[2].to_bytes(1, 'big') + str.encode("Successful return to UDP ingress")
+    UDPWorkerSocket.sendto(bytesToSend, ingressAddressPort)

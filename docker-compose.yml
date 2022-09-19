@@ -1,6 +1,6 @@
 version: '3.7'
 services:
-  server:
+  ingress:
     build: ./ingress/
     container_name: ingress
     network_mode: "host"
@@ -9,8 +9,13 @@ services:
     build: ./client/
     container_name: client1
     network_mode: "host"
+    depends_on:
+      - ingress
+      - worker1
 
-  client2:
-    build: ./client/
-    container_name: client2
+  worker1:
+    build: ./worker/
+    container_name: worker1
     network_mode: "host"
+    depends_on:
+      - ingress
