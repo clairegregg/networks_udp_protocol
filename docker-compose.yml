@@ -1,0 +1,16 @@
+version: '3.7'
+services:
+  server:
+    build: ./ingress/
+    container_name: ingress
+    network_mode: "host"
+
+  client1:
+    build: ./client/
+    container_name: client1
+    network_mode: "host"
+
+  client2:
+    build: ./client/
+    container_name: client2
+    network_mode: "host"
