@@ -5,7 +5,4 @@ ADD client.py /client/
 
 WORKDIR /client/
 
-# THIS IS ESSENTIAL FOR THE CLIENT SERVER COMMUNICATION
-EXPOSE 10001/udp
-
 ENTRYPOINT ["python3", "-u", "client.py"]
