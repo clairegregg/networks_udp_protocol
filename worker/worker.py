@@ -5,7 +5,7 @@ fromClientMask = 0b1000
 fromWorkerMask = 0b100
 fromWorkerDeclarationMask = 0b101
 fromIngressMask = 0b10
-bufferSize = 1024
+bufferSize = 65507
 
 ingressAddressPort = ("", 20001)
 
@@ -31,4 +31,8 @@ while True:
 
     # Sending a reply to ingress
     bytesToSend = 0b11.to_bytes(1, 'big') + fromWorkerMask.to_bytes(1, 'big') + message[2].to_bytes(1, 'big') + str.encode("Worker sending response back to ingress")
+    with open("test.txt", "rb") as f:
+        bytes_read = f.read(bufferSize-3)
+    bytesToSend += bytes_read
+
     UDPWorkerSocket.sendto(bytesToSend, ingressAddressPort)

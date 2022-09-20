@@ -6,7 +6,7 @@ fromClientMask = 0b1000
 fromWorkerMask = 0b100
 fromWorkerDeclarationMask = 0b101
 fromIngressMask = 0b10
-bufferSize = 1024
+bufferSize = 65507
 
 localIP = ""
 localPort = 20001

@@ -5,9 +5,9 @@ fromClientMask = 0b1000
 fromWorkerMask = 0b100
 fromWorkerDeclarationMask = 0b101
 fromIngressMask = 0b10
-bufferSize = 1024
+bufferSize = 65507
 
-bytesToSend = 0b10.to_bytes(1, 'big') + fromClientMask.to_bytes(1, 'big') + str.encode("Client requesting file")
+bytesToSend = 0b10.to_bytes(1, 'big') + fromClientMask.to_bytes(1, 'big') + 0b0.to_bytes(1, 'big') + str.encode("Client requesting file")
 
 # Empty IP number, assigned by Docker
 serverAddressPort = ("", 20001)

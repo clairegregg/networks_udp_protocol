@@ -14,7 +14,7 @@ services:
 
     deploy:
       mode: replicated
-      replicas: 20
+      replicas: 2
 
   worker:
     build: ./worker/
@@ -24,7 +24,7 @@ services:
 
     deploy:
       mode: replicated
-      replicas: 20
+      replicas: 2
 
   tcpdump:
     image: kaazing/tcpdump
