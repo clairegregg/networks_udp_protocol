@@ -1,5 +1,6 @@
 import socket
 import random
+import queue
 
 # common variables which i can't figure out how to import
 numberOfHeaderBytesBase = 0b11
@@ -14,7 +15,7 @@ def baseHeaderBuild(length, actionSelector, client):
 
 localIP = ""
 localPort = 20001
-workers = []
+workers = queue.Queue(0)
 clients = []
 
 # Create a UDP socket
@@ -39,12 +40,7 @@ while True:
         print(IP)
         clients.append(address)
 
-        no_workers = len(workers) < 1
-        if no_workers:
-            print("no_workers")
-            continue
-
-        worker = random.choice(workers) # select worker in a better way
+        worker = workers.get(True, 0) # If there is no worker currently available, block until there is
         bytesToSend = (baseHeaderBuild(message[0], fromIngressMask, len(clients)-1)
             + message[numberOfHeaderBytesBase:message[0]] # Gives file name which is after base header and before any other explanatory message
             + str.encode("Ingress passing along file request"))
@@ -56,11 +52,11 @@ while True:
 
         # If message is a declaration from worker
         if message[1] & fromWorkerDeclarationMask == fromWorkerDeclarationMask:
-            workers.append(address)
             msg = "Worker declared: {}".format(message)
             IP = "Worker IP address: {}".format(address)
             print(msg)
             print(IP)
+            workers.put(address)
             continue
 
         # message is from worker but is not declaration
@@ -68,6 +64,7 @@ while True:
         IP = "Worker IP address: {}".format(address)
         print(msg)
         print(IP)
+        workers.put(address)
         client = message[2]
         if client > len(clients):
             print("ERROR INVALID CLIENT")
