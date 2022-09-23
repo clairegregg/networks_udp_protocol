@@ -2,7 +2,8 @@ FROM python:latest
 
 ADD worker.py /worker/
 ADD test.txt /worker/
-ADD longggg.txt /worker/
+ADD long_test.txt /worker/
+ADD longer_than_buffer_test.txt /worker/
 
 WORKDIR /worker/
 

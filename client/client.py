@@ -1,4 +1,5 @@
 import socket
+import random
 
 # common variables which i can't figure out how to import
 numberOfHeaderBytesBase = 0b11
@@ -11,9 +12,10 @@ bufferSize = 65507
 def baseHeaderBuild(length, actionSelector, client):
     return length.to_bytes(1, 'big') + actionSelector.to_bytes(1, 'big') + client.to_bytes(1, 'big')
 
-fileName = "test.txt"
-bytesToSend = (baseHeaderBuild(numberOfHeaderBytesBase + len(fileName), fromClientMask, noClientSelected)
-    + str.encode(fileName + "Client requesting file"))
+fileNames = ["test.txt", "long_test.txt"]#, "longer_than_buffer_test.txt"]
+chosenFile = random.choice(fileNames)
+bytesToSend = (baseHeaderBuild(numberOfHeaderBytesBase + len(chosenFile), fromClientMask, noClientSelected)
+    + str.encode(chosenFile + "Client requesting file"))
 
 # Empty IP number, assigned by Docker
 serverAddressPort = ("", 20001)

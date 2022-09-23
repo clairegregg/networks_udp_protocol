@@ -1,5 +1,4 @@
 import socket
-import random
 import queue
 
 # common variables which i can't figure out how to import
