@@ -2,11 +2,15 @@ import socket
 import random
 
 # common variables which i can't figure out how to import
+numberOfHeaderBytesBase = 0b11
+noClientSelected = 0b0
 fromClientMask = 0b1000
 fromWorkerMask = 0b100
 fromWorkerDeclarationMask = 0b101
 fromIngressMask = 0b10
 bufferSize = 65507
+def baseHeaderBuild(length, actionSelector, client):
+    return length.to_bytes(1, 'big') + actionSelector.to_bytes(1, 'big') + client.to_bytes(1, 'big')
 
 localIP = ""
 localPort = 20001
@@ -34,15 +38,23 @@ while True:
         print(msg)
         print(IP)
         clients.append(address)
+
         no_workers = len(workers) < 1
         if no_workers:
             print("no_workers")
-        worker = random.choice(workers) # select worker
-        bytesToSend = 0b11.to_bytes(1, 'big') + fromIngressMask.to_bytes(1, 'big') + (len(clients)-1).to_bytes(1, 'big') + str.encode("Ingress passing along file request")
+            continue
+
+        worker = random.choice(workers) # select worker in a better way
+        bytesToSend = (baseHeaderBuild(message[0], fromIngressMask, len(clients)-1)
+            + message[numberOfHeaderBytesBase:message[0]] # Gives file name which is after base header and before any other explanatory message
+            + str.encode("Ingress passing along file request"))
+
         UDPServerSocket.sendto(bytesToSend, worker)
 
     # if message is from worker
     elif message[1] & fromWorkerMask == fromWorkerMask:
+
+        # If message is a declaration from worker
         if message[1] & fromWorkerDeclarationMask == fromWorkerDeclarationMask:
             workers.append(address)
             msg = "Worker declared: {}".format(message)
@@ -60,5 +72,9 @@ while True:
         if client > len(clients):
             print("ERROR INVALID CLIENT")
             continue
+
+        bytesToSend = (baseHeaderBuild(message[0], fromIngressMask, noClientSelected)
+            + message[numberOfHeaderBytesBase:message[0]] # Gives file name which is after base header and before any other explanatory message
+            + message[message[0]:])
         # Sending a reply to the client
-        UDPServerSocket.sendto(str.encode("Ingress returning response to client"), clients[client])
+        UDPServerSocket.sendto(bytesToSend, clients[client])

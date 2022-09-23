@@ -1,13 +1,19 @@
 import socket
 
 # common variables which i can't figure out how to import
+numberOfHeaderBytesBase = 0b11
+noClientSelected = 0b0
 fromClientMask = 0b1000
 fromWorkerMask = 0b100
 fromWorkerDeclarationMask = 0b101
 fromIngressMask = 0b10
 bufferSize = 65507
+def baseHeaderBuild(length, actionSelector, client):
+    return length.to_bytes(1, 'big') + actionSelector.to_bytes(1, 'big') + client.to_bytes(1, 'big')
 
-bytesToSend = 0b10.to_bytes(1, 'big') + fromClientMask.to_bytes(1, 'big') + 0b0.to_bytes(1, 'big') + str.encode("Client requesting file")
+fileName = "test.txt"
+bytesToSend = (baseHeaderBuild(numberOfHeaderBytesBase + len(fileName), fromClientMask, noClientSelected)
+    + str.encode(fileName + "Client requesting file"))
 
 # Empty IP number, assigned by Docker
 serverAddressPort = ("", 20001)

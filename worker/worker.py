@@ -1,11 +1,15 @@
 import socket
 
 # common variables which i can't figure out how to import
+numberOfHeaderBytesBase = 0b11
+noClientSelected = 0b0
 fromClientMask = 0b1000
 fromWorkerMask = 0b100
 fromWorkerDeclarationMask = 0b101
 fromIngressMask = 0b10
 bufferSize = 65507
+def baseHeaderBuild(length, actionSelector, client):
+    return length.to_bytes(1, 'big') + actionSelector.to_bytes(1, 'big') + client.to_bytes(1, 'big')
 
 ingressAddressPort = ("", 20001)
 
@@ -13,7 +17,8 @@ ingressAddressPort = ("", 20001)
 UDPWorkerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
 # Declare worker
-bytesToSend = 0b10.to_bytes(1, 'big') + fromWorkerDeclarationMask.to_bytes(1, 'big') + str.encode("Worker declaring itself to ingress")
+bytesToSend = (baseHeaderBuild(numberOfHeaderBytesBase, fromWorkerDeclarationMask, noClientSelected)
+    + str.encode("Worker declaring itself to ingress"))
 UDPWorkerSocket.sendto(bytesToSend, ingressAddressPort)
 
 print("Worker UDP server up and listening")
@@ -29,10 +34,13 @@ while True:
     print(msgFromIngress)
     print(ingressIP)
 
+    headerLength = message[0]
+    fileName = message[numberOfHeaderBytesBase:headerLength] # Gives file name which is after base header and before any other explanatory message
     # Sending a reply to ingress
-    bytesToSend = 0b11.to_bytes(1, 'big') + fromWorkerMask.to_bytes(1, 'big') + message[2].to_bytes(1, 'big') + str.encode("Worker sending response back to ingress")
-    with open("test.txt", "rb") as f:
-        bytes_read = f.read(bufferSize-3)
+    bytesToSend = (baseHeaderBuild(headerLength, fromWorkerMask, message[2])
+        + fileName)
+    with open(fileName.decode(), "rb") as f:
+        bytes_read = f.read(bufferSize-headerLength)
     bytesToSend += bytes_read
 
     UDPWorkerSocket.sendto(bytesToSend, ingressAddressPort)
