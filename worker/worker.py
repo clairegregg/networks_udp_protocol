@@ -1,12 +1,18 @@
 import socket
 
 # common variables which i can't figure out how to import
-numberOfHeaderBytesBase = 0b11
+numberOfHeaderBytesBase = 0b100
 noClientSelected = 0b0
+noFileSegment = 0b0
 fromClientMask = 0b1000
 fromWorkerMask = 0b100
-fromWorkerDeclarationMask = 0b101
+declarationMask = 0b1
 fromIngressMask = 0b10
+notFinalSegmentMask = 0b10000
+headerLengthIndex = 0
+actionSelectorIndex = 1
+clientIndex = 2
+partOfFileIndex = 3
 bufferSize = 65507
 def baseHeaderBuild(length, actionSelector, client):
     return length.to_bytes(1, 'big') + actionSelector.to_bytes(1, 'big') + client.to_bytes(1, 'big')
@@ -17,7 +23,8 @@ ingressAddressPort = ("", 20001)
 UDPWorkerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
 # Declare worker
-bytesToSend = (baseHeaderBuild(numberOfHeaderBytesBase, fromWorkerDeclarationMask, noClientSelected)
+bytesToSend = (baseHeaderBuild(numberOfHeaderBytesBase, (declarationMask|fromWorkerMask), noClientSelected)
+    + noFileSegment.to_bytes(1, 'big')
     + str.encode("Worker declaring itself to ingress"))
 UDPWorkerSocket.sendto(bytesToSend, ingressAddressPort)
 
@@ -37,10 +44,22 @@ while True:
     headerLength = message[0]
     fileName = message[numberOfHeaderBytesBase:headerLength] # Gives file name which is after base header and before any other explanatory message
     # Sending a reply to ingress
-    bytesToSend = (baseHeaderBuild(headerLength, fromWorkerMask, message[2])
-        + fileName)
+    bytesToSend = None
+    filePart = 0
     with open(fileName.decode(), "rb") as f:
-        bytes_read = f.read(bufferSize-headerLength)
-    bytesToSend += bytes_read
+        while True:
+            bytes_read = f.read(bufferSize-headerLength)
+            if len(bytes_read) < bufferSize-headerLength:
+                # Ensure notFinalSegment bit not set to represent that this is the final segment
+                bytesToSend = (baseHeaderBuild(headerLength, fromWorkerMask,
+                message[2]))
+                send = bytesToSend + filePart.to_bytes(1, 'big') + fileName + bytes_read
+                UDPWorkerSocket.sendto(send, ingressAddressPort)
+                break
 
-    UDPWorkerSocket.sendto(bytesToSend, ingressAddressPort)
+            # Set notFinalSegment bit to represent that there are more segments of this file to come
+            bytesToSend = (baseHeaderBuild(headerLength, fromWorkerMask|notFinalSegmentMask,
+            message[2]))
+            send = bytesToSend + filePart.to_bytes(1, 'big')  + fileName + bytes_read
+            UDPWorkerSocket.sendto(send, ingressAddressPort)
+            filePart += 1
