@@ -45,21 +45,30 @@ while True:
     fileName = message[numberOfHeaderBytesBase:headerLength] # Gives file name which is after base header and before any other explanatory message
     # Sending a reply to ingress
     bytesToSend = None
-    filePart = 0
+
     with open(fileName.decode(), "rb") as f:
+        bytes_read = f.read()
+        filePart = 0
+        startRead = 0
         while True:
-            bytes_read = f.read(bufferSize-headerLength)
-            if len(bytes_read) < bufferSize-headerLength:
+            endRead = startRead + bufferSize-headerLength
+
+            # If this is the final segment
+            if endRead > len(bytes_read):
+                print("Sending final segment")
+                endRead = len(bytes_read)-1
                 # Ensure notFinalSegment bit not set to represent that this is the final segment
                 bytesToSend = (baseHeaderBuild(headerLength, fromWorkerMask,
                 message[2]))
-                send = bytesToSend + filePart.to_bytes(1, 'big') + fileName + bytes_read
+                send = bytesToSend + filePart.to_bytes(1, 'big') + fileName + bytes_read[startRead:endRead]
                 UDPWorkerSocket.sendto(send, ingressAddressPort)
                 break
 
             # Set notFinalSegment bit to represent that there are more segments of this file to come
+            print("Sending not final segment")
             bytesToSend = (baseHeaderBuild(headerLength, fromWorkerMask|notFinalSegmentMask,
             message[2]))
-            send = bytesToSend + filePart.to_bytes(1, 'big')  + fileName + bytes_read
+            send = bytesToSend + filePart.to_bytes(1, 'big') + fileName + bytes_read[startRead:endRead]
             UDPWorkerSocket.sendto(send, ingressAddressPort)
+            startRead = endRead
             filePart += 1
