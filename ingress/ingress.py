@@ -66,7 +66,7 @@ while True:
             continue
 
         # message is from worker but is not declaration
-        msg = "Message from worker received".format(message)
+        msg = "Message from worker received"
         IP = "Worker IP address: {}".format(address)
         print(msg)
         print(IP)
