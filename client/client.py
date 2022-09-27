@@ -18,7 +18,7 @@ bufferSize = 65507
 def baseHeaderBuild(length, actionSelector, client):
     return length.to_bytes(1, 'big') + actionSelector.to_bytes(1, 'big') + client.to_bytes(1, 'big')
 
-fileNames = ["long_test.txt", "test.txt", "longer_than_buffer_test.txt"] #
+fileNames = ["long_test.txt", "test.txt", "longer_than_buffer_test.txt", "test_image.png"] #
 chosenFile = random.choice(fileNames)
 bytesToSend = (baseHeaderBuild(numberOfHeaderBytesBase + len(chosenFile), fromClientMask, noClientSelected)
     + noFileSegment.to_bytes(1, 'big')
@@ -58,3 +58,8 @@ for segment in fileSegments:
 
 msg = "File received: {}".format(file)
 print(msg)
+
+outputFile = open(r"../output/{}".format("test_image.png"), "w")
+outputFile = open(r"../output/{}".format("test_image.png"), "wb")
+outputFile.write(file)
+outputFile.close()

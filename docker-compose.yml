@@ -8,6 +8,8 @@ services:
   client:
     build: ./client/
     network_mode: "host"
+    volumes:
+      - ./output:/output
     depends_on:
       - ingress
       - worker

@@ -4,6 +4,7 @@ ADD worker.py /worker/
 ADD test.txt /worker/
 ADD long_test.txt /worker/
 ADD longer_than_buffer_test.txt /worker/
+ADD test_image.png /worker/
 
 WORKDIR /worker/
 
