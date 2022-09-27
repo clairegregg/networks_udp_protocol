@@ -55,7 +55,6 @@ while True:
 
             # If this is the final segment
             if endRead > len(bytes_read):
-                print("Sending final segment")
                 endRead = len(bytes_read)-1
                 # Ensure notFinalSegment bit not set to represent that this is the final segment
                 bytesToSend = (baseHeaderBuild(headerLength, fromWorkerMask,
@@ -65,7 +64,6 @@ while True:
                 break
 
             # Set notFinalSegment bit to represent that there are more segments of this file to come
-            print("Sending not final segment")
             bytesToSend = (baseHeaderBuild(headerLength, fromWorkerMask|notFinalSegmentMask,
             message[2]))
             send = bytesToSend + filePart.to_bytes(1, 'big') + fileName + bytes_read[startRead:endRead]

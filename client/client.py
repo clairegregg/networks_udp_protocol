@@ -26,7 +26,6 @@ bytesToSend = (baseHeaderBuild(numberOfHeaderBytesBase + len(chosenFile), fromCl
 
 # Empty IP number, assigned by Docker
 serverAddressPort = ("", 20001)
-bufferSize = 1024
 
 # Create a UDP socket
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
@@ -50,7 +49,6 @@ while True:
         fileSegmentNumber = message[partOfFileIndex] + 1
 
     if len(fileSegments) == fileSegmentNumber:
-        print
         fileSegments.sort(key=fileSegmentNumberGet)
         break
 
