@@ -1,7 +1,8 @@
 
 FROM python:latest
 
-ADD client.py /client/
+ADD client/client.py /client/
+COPY protocol_lib.py /client/
 
 WORKDIR /client/
 

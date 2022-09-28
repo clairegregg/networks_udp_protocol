@@ -1,6 +1,7 @@
 FROM python:latest
 
-ADD ingress.py /ingress/
+ADD ingress/ingress.py /ingress/
+COPY protocol_lib.py /ingress/
 
 WORKDIR /ingress/
 

@@ -1,25 +1,9 @@
 import socket
 import queue
-
-# common variables which i can't figure out how to import
-numberOfHeaderBytesBase = 0b100
-noClientSelected = 0b0
-noFileSegment = 0b0
-fromClientMask = 0b1000
-fromWorkerMask = 0b100
-declarationMask = 0b1
-fromIngressMask = 0b10
-notFinalSegmentMask = 0b10000
-headerLengthIndex = 0
-actionSelectorIndex = 1
-clientIndex = 2
-partOfFileIndex = 3
-bufferSize = 65507
-def baseHeaderBuild(length, actionSelector, client):
-    return length.to_bytes(1, 'big') + actionSelector.to_bytes(1, 'big') + client.to_bytes(1, 'big')
+import protocol_lib
 
 localIP = ""
-localPort = 20001
+localPort = protocol_lib.ingressPort
 workers = queue.Queue(0)
 clients = []
 
@@ -33,12 +17,12 @@ print("UDP ingress server up and listening")
 
 # Listen for incoming messages
 while True:
-    bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
+    bytesAddressPair = UDPServerSocket.recvfrom(protocol_lib.bufferSize)
     message = bytesAddressPair[0]
     address = bytesAddressPair[1]
 
     # if message is from client
-    if message[actionSelectorIndex] & fromClientMask == fromClientMask:
+    if message[protocol_lib.actionSelectorIndex] & protocol_lib.fromClientMask == protocol_lib.fromClientMask:
         msg = "Message from client: {}".format(message)
         IP = "Client IP address: {}".format(address)
         print(msg)
@@ -46,18 +30,18 @@ while True:
         clients.append(address)
 
         worker = workers.get(True, 0) # If there is no worker currently available, block until there is
-        bytesToSend = (baseHeaderBuild(message[headerLengthIndex], fromIngressMask, len(clients)-1)
-            + message[partOfFileIndex].to_bytes(1, 'big')
-            + message[numberOfHeaderBytesBase:message[headerLengthIndex]] # Gives file name which is after base header and before any other explanatory message
+        bytesToSend = (protocol_lib.baseHeaderBuild(message[protocol_lib.headerLengthIndex], protocol_lib.fromIngressMask, len(clients)-1)
+            + message[protocol_lib.partOfFileIndex].to_bytes(1, 'big')
+            + message[protocol_lib.numberOfHeaderBytesBase:message[protocol_lib.headerLengthIndex]] # Gives file name which is after base header and before any other explanatory message
             + str.encode("Ingress passing along file request"))
 
         UDPServerSocket.sendto(bytesToSend, worker)
 
     # if message is from worker
-    elif message[actionSelectorIndex] & fromWorkerMask == fromWorkerMask:
+    elif message[protocol_lib.actionSelectorIndex] & protocol_lib.fromWorkerMask == protocol_lib.fromWorkerMask:
 
         # If message is a declaration from worker
-        if message[1] & declarationMask == declarationMask:
+        if message[protocol_lib.actionSelectorIndex] & protocol_lib.declarationMask == protocol_lib.declarationMask:
             msg = "Worker declared: {}".format(message)
             IP = "Worker IP address: {}".format(address)
             print(msg)
@@ -71,23 +55,23 @@ while True:
         print(msg)
         print(IP)
 
-        client = message[clientIndex]
+        client = message[protocol_lib.clientIndex]
         if client > len(clients):
             print("ERROR INVALID CLIENT")
             continue
 
         bytesToSend = None
         # If it is the final segment, that means the worker is ready
-        if message[actionSelectorIndex] & notFinalSegmentMask != notFinalSegmentMask:
+        if message[protocol_lib.actionSelectorIndex] & protocol_lib.notFinalSegmentMask != protocol_lib.notFinalSegmentMask:
             workers.put(address)
-            bytesToSend = (baseHeaderBuild(message[0], fromIngressMask, noClientSelected)
-            + message[partOfFileIndex].to_bytes(1, 'big')
-            + message[numberOfHeaderBytesBase:message[0]] # Gives file name which is after base header and before any other explanatory message
-            + message[message[0]:])
+            bytesToSend = (protocol_lib.baseHeaderBuild(message[protocol_lib.headerLengthIndex], protocol_lib.fromIngressMask, protocol_lib.noClientSelected)
+            + message[protocol_lib.partOfFileIndex].to_bytes(1, 'big')
+            + message[protocol_lib.numberOfHeaderBytesBase:message[protocol_lib.headerLengthIndex]] # Gives file name which is after base header and before any other explanatory message
+            + message[message[protocol_lib.headerLengthIndex]:])
         else:
-            bytesToSend = (baseHeaderBuild(message[0], fromIngressMask|notFinalSegmentMask, noClientSelected)
-                + message[partOfFileIndex].to_bytes(1, 'big')
-                + message[numberOfHeaderBytesBase:message[0]] # Gives file name which is after base header and before any other explanatory message
-                + message[message[0]:])
+            bytesToSend = (protocol_lib.baseHeaderBuild(message[protocol_lib.headerLengthIndex], protocol_lib.fromIngressMask|protocol_lib.notFinalSegmentMask, protocol_lib.noClientSelected)
+                + message[protocol_lib.partOfFileIndex].to_bytes(1, 'big')
+                + message[protocol_lib.numberOfHeaderBytesBase:message[protocol_lib.headerLengthIndex]] # Gives file name which is after base header and before any other explanatory message
+                + message[message[protocol_lib.headerLengthIndex]:])
         # Sending a reply to the client
         UDPServerSocket.sendto(bytesToSend, clients[client])
