@@ -43,7 +43,10 @@ for segment in fileSegments:
 msg = "File received: {}".format(file)
 print(msg)
 
-outputFile = open(r"../output/{}".format("test_image.png"), "w")
-outputFile = open(r"../output/{}".format("test_image.png"), "wb")
+fileName = fileSegments[0]
+fileName = fileName[protocol_lib.numberOfHeaderBytesBase:fileName[protocol_lib.headerLengthIndex]].decode()
+
+outputFile = open(r"../output/{}".format(fileName), "w")
+outputFile = open(r"../output/{}".format(fileName), "wb")
 outputFile.write(file)
 outputFile.close()
