@@ -1,23 +1,9 @@
 import socket
 import queue
 import protocol_lib
+import multiprocessing
 
-localIP = ""
-localPort = protocol_lib.ingressPort
-workers = queue.Queue(0)
-clients = []
-
-# Create a UDP socket
-UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-
-# Bind socket to IP and port
-UDPServerSocket.bind((localIP, localPort))
-
-print("UDP ingress server up and listening")
-
-# Listen for incoming messages
-while True:
-    bytesAddressPair = UDPServerSocket.recvfrom(protocol_lib.bufferSize)
+def deal_with_input(bytesAddressPair, workers, clients, lockWorkers, lockClients):
     message = bytesAddressPair[0]
     address = bytesAddressPair[1]
 
@@ -27,9 +13,14 @@ while True:
         IP = "Client IP address: {}".format(address)
         print(msg)
         print(IP)
+        lockClients.acquire()
         clients.append(address)
+        lockClients.release()
 
-        worker = workers.get(True, 0) # If there is no worker currently available, block until there is
+        # TODO: Make this not block infinitely if the queue is empty - this should never happen but just in case
+        lockWorkers.acquire()
+        worker = workers.get(block=True, timeout=None) # If there is no worker currently available, block until there is
+        lockWorkers.release()
         bytesToSend = (protocol_lib.baseHeaderBuild(message[protocol_lib.headerLengthIndex], protocol_lib.fromIngressMask, len(clients)-1)
             + message[protocol_lib.partOfFileIndex].to_bytes(1, 'big')
             + message[protocol_lib.numberOfHeaderBytesBase:message[protocol_lib.headerLengthIndex]] # Gives file name which is after base header and before any other explanatory message
@@ -46,8 +37,10 @@ while True:
             IP = "Worker IP address: {}".format(address)
             print(msg)
             print(IP)
+            lockWorkers.acquire()
             workers.put(address)
-            continue
+            lockWorkers.release()
+            return
 
         # message is from worker but is not declaration
         msg = "Message from worker received"
@@ -58,7 +51,7 @@ while True:
         client = message[protocol_lib.clientIndex]
         if client > len(clients):
             print("ERROR INVALID CLIENT")
-            continue
+            return
 
         bytesToSend = None
         # If it is the final segment, that means the worker is ready
@@ -75,3 +68,33 @@ while True:
                 + message[message[protocol_lib.headerLengthIndex]:])
         # Sending a reply to the client
         UDPServerSocket.sendto(bytesToSend, clients[client])
+
+# Main contents:
+
+localIP = ""
+localPort = protocol_lib.ingressPort
+#workers = queue.Queue(0)
+#clients = []
+manager = multiprocessing.Manager()
+workers = manager.Queue()
+clients = manager.list()
+lockWorkers = manager.Lock()
+lockClients = manager.Lock()
+
+# Create a UDP socket
+UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+
+# Bind socket to IP and port
+UDPServerSocket.bind((localIP, localPort))
+
+print("UDP ingress server up and listening")
+
+# Listen for incoming messages
+while True:
+    bytesAddressPair = UDPServerSocket.recvfrom(protocol_lib.bufferSize)
+    print("Received message")
+    processReturn = multiprocessing.SimpleQueue()
+
+    process = multiprocessing.Process(target=deal_with_input,args=(bytesAddressPair,workers,clients,lockWorkers, lockClients))
+    process.start()
+    process.join()
