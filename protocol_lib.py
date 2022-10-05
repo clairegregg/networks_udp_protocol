@@ -6,6 +6,8 @@ fromWorkerMask = 0b100
 declarationMask = 0b1
 fromIngressMask = 0b10
 notFinalSegmentMask = 0b10000
+ackMask = 0b100000
+nackMask = 0b1000000
 
 # Indices of sections of the header
 headerLengthIndex = 0

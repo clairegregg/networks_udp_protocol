@@ -15,6 +15,7 @@ def deal_with_input(bytesAddressPair, workers, clients, lockWorkers, lockClients
         print(IP)
         lockClients.acquire()
         clients.append(address)
+        print("Client {} requesting file {}".format(len(clients), message[protocol_lib.numberOfHeaderBytesBase:message[protocol_lib.headerLengthIndex]]))
         lockClients.release()
 
         # TODO: Make this not block infinitely if the queue is empty - this should never happen but just in case
@@ -54,6 +55,7 @@ def deal_with_input(bytesAddressPair, workers, clients, lockWorkers, lockClients
             return
 
         bytesToSend = None
+        print("Received part {}".format(message[protocol_lib.partOfFileIndex]))
         # If it is the final segment, that means the worker is ready
         if message[protocol_lib.actionSelectorIndex] & protocol_lib.notFinalSegmentMask != protocol_lib.notFinalSegmentMask:
             workers.put(address)
@@ -69,12 +71,16 @@ def deal_with_input(bytesAddressPair, workers, clients, lockWorkers, lockClients
         # Sending a reply to the client
         UDPServerSocket.sendto(bytesToSend, clients[client])
 
+        # Building ack message to send back to worker
+        bytesToSend = (protocol_lib.baseHeaderBuild(protocol_lib.numberOfHeaderBytesBase, protocol_lib.fromIngressMask|protocol_lib.ackMask, message[protocol_lib.clientIndex])
+            + message[protocol_lib.partOfFileIndex].to_bytes(1,'big')
+            + message[protocol_lib.numberOfHeaderBytesBase:message[protocol_lib.headerLengthIndex]]) # Gives file name which is after base header and before any other explanatory message
+        UDPServerSocket.sendto(bytesToSend, address)
+
 # Main contents:
 
 localIP = ""
 localPort = protocol_lib.ingressPort
-#workers = queue.Queue(0)
-#clients = []
 manager = multiprocessing.Manager()
 workers = manager.Queue()
 clients = manager.list()
@@ -93,8 +99,7 @@ print("UDP ingress server up and listening")
 while True:
     bytesAddressPair = UDPServerSocket.recvfrom(protocol_lib.bufferSize)
     print("Received message")
-    processReturn = multiprocessing.SimpleQueue()
 
     process = multiprocessing.Process(target=deal_with_input,args=(bytesAddressPair,workers,clients,lockWorkers, lockClients))
     process.start()
-    process.join()
+    #process.join()

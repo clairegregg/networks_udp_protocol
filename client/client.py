@@ -57,6 +57,6 @@ try:
     outputFile = open(r"../output/{}".format(fileName), "wb")
     outputFile.write(file)
     outputFile.close()
-    
+
 except TimeoutError:
     print("Receiving file timed out. Bits of the file probably got lost! After all UDP stands for Unreliable Datagram Protocol (not actually)")
