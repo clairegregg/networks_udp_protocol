@@ -71,11 +71,6 @@ def deal_with_input(bytesAddressPair, workers, clients, lockWorkers, lockClients
         # Sending a reply to the client
         UDPServerSocket.sendto(bytesToSend, clients[client])
 
-        # Building ack message to send back to worker
-        bytesToSend = (protocol_lib.baseHeaderBuild(protocol_lib.numberOfHeaderBytesBase, protocol_lib.fromIngressMask|protocol_lib.ackMask, message[protocol_lib.clientIndex])
-            + message[protocol_lib.partOfFileIndex].to_bytes(1,'big')
-            + message[protocol_lib.numberOfHeaderBytesBase:message[protocol_lib.headerLengthIndex]]) # Gives file name which is after base header and before any other explanatory message
-        UDPServerSocket.sendto(bytesToSend, address)
 
 # Main contents:
 

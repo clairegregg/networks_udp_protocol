@@ -57,9 +57,5 @@ while True:
     print(msgFromIngress)
     print(ingressIP)
 
-    if message[protocol_lib.actionSelectorIndex] & protocol_lib.ackMask == protocol_lib.ackMask:
-        print("Message is ack")
-        continue
-
     process = multiprocessing.Process(target=send_file, args=(message,address))
     process.start()
