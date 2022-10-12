@@ -7,7 +7,7 @@ import time
 def file_timeout(time):
     time.sleep(time)
 
-fileNames = ["long_test.txt", "test.txt", "longer_than_buffer_test.txt", "test_image.png", "medium_test_image.png", "large_test_image.png"]
+fileNames = ["long_test.txt", "test.txt", "longer_than_buffer_test.txt", "test_image.png", "medium_test_image.png"]#, "large_test_image.png"]
 chosenFile = random.choice(fileNames)
 bytesToSend = (protocol_lib.baseHeaderBuild(protocol_lib.numberOfHeaderBytesBase + len(chosenFile), protocol_lib.fromClientMask, protocol_lib.noClientSelected)
     + protocol_lib.noFileSegment.to_bytes(1, 'big')
