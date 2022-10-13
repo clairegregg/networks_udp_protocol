@@ -12,7 +12,7 @@ chosenFile = random.choice(fileNames)
 bytesToSend = (protocol_lib.baseHeaderBuild(protocol_lib.numberOfHeaderBytesBase + len(chosenFile), protocol_lib.fromClientMask, protocol_lib.noClientSelected)
     + protocol_lib.noFileSegment.to_bytes(1, 'big')
     + str.encode(chosenFile + "Client requesting file"))
-
+print("Client requesting file {}".format(chosenFile))
 # Empty IP number, assigned by Docker
 ingressAddressPort = ("", protocol_lib.ingressPort)
 
@@ -21,7 +21,7 @@ UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
 # Send to server using UDP socket
 UDPClientSocket.sendto(bytesToSend, ingressAddressPort)
-UDPClientSocket.settimeout(30) # Timeout of 30 seconds, would be changed if put into a production environment (as opposed to testing)
+UDPClientSocket.settimeout(10) # Timeout of 10 seconds, would be changed if put into a production environment (as opposed to testing)
 
 # File segment list, to store file segments while waiting for others to arrive
 fileSegments = []

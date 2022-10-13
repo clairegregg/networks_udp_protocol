@@ -15,7 +15,6 @@ def deal_with_input(bytesAddressPair, workers, clients, lockWorkers, lockClients
         print(IP)
         lockClients.acquire()
         clients.append(address)
-        print("Client {} requesting file {}".format(len(clients), message[protocol_lib.numberOfHeaderBytesBase:message[protocol_lib.headerLengthIndex]]))
         lockClients.release()
 
         # TODO: Make this not block infinitely if the queue is empty - this should never happen but just in case
@@ -55,7 +54,6 @@ def deal_with_input(bytesAddressPair, workers, clients, lockWorkers, lockClients
             return
 
         bytesToSend = None
-        print("Received part {}".format(message[protocol_lib.partOfFileIndex]))
         # If it is the final segment, that means the worker is ready
         if message[protocol_lib.actionSelectorIndex] & protocol_lib.notFinalSegmentMask != protocol_lib.notFinalSegmentMask:
             workers.put(address)
