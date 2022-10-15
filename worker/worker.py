@@ -1,5 +1,9 @@
 import socket
 import protocol_lib
+import time
+
+chunk_size = 3
+wait_time = 0.001
 
 def get_parts_received(message):
     numBytesPartsReceived = message[protocol_lib.bytesOfReceivedPartsIndex]
@@ -7,25 +11,27 @@ def get_parts_received(message):
     partsReceivedBytes = int.from_bytes(message[headerLength:headerLength+numBytesPartsReceived], "big")
     partsReceived = []
 
-    for i in reversed(range((numBytesPartsReceived * 8)-1)):
+    for i in reversed(range((numBytesPartsReceived * 8))):
         if partsReceivedBytes & 0b1 == 0b1:
             partsReceived.append(i)
         partsReceivedBytes  = partsReceivedBytes >> 1
-
     return partsReceived
 
 def send_file(currentFileName, currentFile, client, UDPWorkerSocket, partsReceived):
-    print("sending file, length ", len(currentFile))
+    numFilesSentInChunk = 0
     for partIndex in range(len(currentFile)):
-        print("Sending part ", partIndex)
+        # Leave gap after sending certain number of files to have greater chance of them being received
+        if numFilesSentInChunk >= chunk_size:
+            time.sleep(wait_time)
+            numFilesSentInChunk = 0
+
         # Do not send a segment which has been received again
         if partIndex in partsReceived:
             continue
         if partIndex == len(currentFile)-1:
-            actionByte = protocol_lib.fromWorkerMask|protocol_lib.notFinalSegmentMask
-        else:
             actionByte = protocol_lib.fromWorkerMask
-
+        else:
+            actionByte = protocol_lib.fromWorkerMask|protocol_lib.notFinalSegmentMask
         bytesToSend = (
             protocol_lib.baseHeaderBuild(protocol_lib.numberOfHeaderBytesBase+len(currentFileName), actionByte, client)
             + partIndex.to_bytes(1, 'big')
@@ -34,20 +40,22 @@ def send_file(currentFileName, currentFile, client, UDPWorkerSocket, partsReceiv
         )
 
         UDPWorkerSocket.sendto(bytesToSend, ingressAddressPort)
+        numFilesSentInChunk += 1
 
 def get_file(message, currentFileName, currentFile):
     headerLength = message[protocol_lib.headerLengthIndex]
-    fileName = message[protocol_lib.numberOfHeaderBytesRequest:headerLength]
+    
+    headerAndReceivedLength = protocol_lib.numberOfHeaderBytesRequest + (message[protocol_lib.bytesOfReceivedPartsIndex])
+    fileName = message[protocol_lib.numberOfHeaderBytesRequest:headerLength].decode()
     if fileName == currentFileName:
-        return currentFile
+        return currentFileName, currentFile
     else:
         currentFile = []
-        with open(fileName.decode(), "rb") as f:
+        with open(fileName, "rb") as f:
             bytes_read = f.read()
             filePart = 0
             startRead = 0
             while True:
-                print("Reading part {}".format(filePart))
                 endRead = startRead + protocol_lib.bufferSize-headerLength
 
                 # If this is the final segment
@@ -58,8 +66,7 @@ def get_file(message, currentFileName, currentFile):
                 currentFile.append(bytes_read[startRead:endRead])
                 startRead = endRead
                 filePart += 1
-        print("File has this many packets ", len(currentFile))
-        return currentFile
+        return (fileName, currentFile)
 
 
 ingressAddressPort = ("", protocol_lib.ingressPort)
@@ -80,17 +87,9 @@ print("Worker UDP server up and listening")
 # Listen for incoming messages
 while True:
     bytesAddressPair = UDPWorkerSocket.recvfrom(protocol_lib.bufferSize)
-    print("Received??????????")
     message = bytesAddressPair[0]
     address = bytesAddressPair[1]
-    msgFromIngress = "Message from ingress: {}".format(message)
-    ingressIP = "Ingress IP address: {}".format(address)
-    print(msgFromIngress)
-    print(ingressIP)
-    currentFile = get_file(message, currentFileName, currentFile)
-    print("got file")
+    currentFileName, currentFile = get_file(message, currentFileName, currentFile)
     partsReceived = get_parts_received(message)
-    print("got parts received")
     client = message[protocol_lib.clientIndex]
-    print("got client")
     send_file(currentFileName, currentFile, client, UDPWorkerSocket, partsReceived)

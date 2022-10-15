@@ -7,10 +7,6 @@ import protocol_lib
 import multiprocessing
 
 def message_from_client(message, address, workers, clients, workersInUse, lockWorkers, lockClients, lockWorkersInUse):
-    msg = "Message from client: {}".format(message)
-    IP = "Client IP address: {}".format(address)
-    print(msg)
-    print(IP)
     if address in clients:
         clientIndex = clients.index(address)
     else:
@@ -39,34 +35,25 @@ def message_from_client(message, address, workers, clients, workersInUse, lockWo
     else:
         worker = workersInUse[clientIndex]
 
-    print("Message[0:clientIndex] = ", message[0:protocol_lib.clientIndex])
     bytesToSend = message[0:protocol_lib.clientIndex] + clientIndex.to_bytes(1, 'big') + message[protocol_lib.clientIndex+1:]
-    print("Received ", message,"Sending on ", bytesToSend)
     UDPServerSocket.sendto(bytesToSend, worker)
 
 def message_from_worker(message, address, workers, clients, lockWorkers):
-            # If message is a declaration from worker
-            if message[protocol_lib.actionSelectorIndex] & protocol_lib.declarationMask == protocol_lib.declarationMask:
-                msg = "Worker declared: {}".format(message)
-                IP = "Worker IP address: {}".format(address)
-                print(msg)
-                print(IP)
-                lockWorkers.acquire()
-                workers.put(address)
-                lockWorkers.release()
-                return
+    # If message is a declaration from worker
+    if message[protocol_lib.actionSelectorIndex] & protocol_lib.declarationMask == protocol_lib.declarationMask:
+        msg = "Worker declared: {}".format(message)
+        IP = "Worker IP address: {}".format(address)
+        print(msg)
+        print(IP)
+        lockWorkers.acquire()
+        workers.put(address)
+        lockWorkers.release()
+        return
 
-            # Message is from worker but is not a declaration
-            msg = "Message from worker received."
-            IP = "Worker IP address: {}".format(address)
-            print(msg)
-            print(IP)
-
-            client = message[protocol_lib.clientIndex]
-
-            print("Received part {} for client {} from worker at address {}".format(message[protocol_lib.partOfFileIndex], client, address))
-            # Sending the reply to the client,
-            UDPServerSocket.sendto(message, clients[client])
+    # Message is from worker but is not a declaration
+    client = message[protocol_lib.clientIndex]
+    # Sending the reply to the client,
+    UDPServerSocket.sendto(message, clients[client])
 
 def deal_with_recv(bytesAddressPair, workers, clients, workersInUse, lockWorkers, lockClients, lockWorkersInUse):
     message = bytesAddressPair[0]
@@ -104,7 +91,6 @@ print("UDP ingress server up and listening")
 # Listen for incoming messages
 while True:
     bytesAddressPair = UDPServerSocket.recvfrom(protocol_lib.bufferSize)
-    print("Received message")
 
     process = multiprocessing.Process(target=deal_with_recv,args=(bytesAddressPair,workers,clients, workersInUse, lockWorkers, lockClients, lockWorkersInUse))
     process.start()

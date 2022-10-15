@@ -3,9 +3,11 @@ import random
 import protocol_lib
 import math
 
-fileNames = ["long_test.txt", "test.txt", "longer_than_buffer_test.txt", "test_image.png", "medium_test_image.png"]#, "large_test_image.png"]
+fileNames = ["long_test.txt", "test.txt", "longer_than_buffer_test.txt", "test_image.png", "medium_test_image.png", "large_test_image.png", "test_gif.gif"]
 ingressAddressPort = ("", protocol_lib.ingressPort)
-timeout = 15
+timeout = 2
+chosenFile = random.choice(fileNames)
+fileReceived = False
 
 def totalFileSegmentNumberGet(message):
     return message[protocol_lib.partOfFileIndex]
@@ -15,16 +17,15 @@ def totalFileSegmentNumberGet(message):
 # If file part 0, 2, 5 have been received, this will return 0b10100100
 def write_segments_received(receivedSegmentNumbers, numBytesPartsReceived):
     segmentsReceived = 0
-    for i in range(numBytesPartsReceived*8):
+    for i in range((numBytesPartsReceived*8)-1):
         if i in receivedSegmentNumbers:
-            segmentsReceived = segmentsReceived & 0b1
-            segmentsReceived = segmentsReceived << 1
+            segmentsReceived = segmentsReceived | 0b1
+        segmentsReceived = segmentsReceived << 1
+
     return segmentsReceived.to_bytes(numBytesPartsReceived, 'big')
 
 # send_request sends a file request to ingress
 def send_request(receivedSegmentNumbers, UDPClientSocket):
-    chosenFile = random.choice(fileNames)
-    print("Requesting file {}".format(chosenFile))
     if len(receivedSegmentNumbers) == 0:
         numBytesPartsReceived = protocol_lib.noPartsReceived.to_bytes(1, 'big')
         partsReceived = None
@@ -47,7 +48,6 @@ def send_request(receivedSegmentNumbers, UDPClientSocket):
 
     bytesToSend += str.encode("Client requesting file")
     # Send to server using UDP socket
-    print("Sending ", bytesToSend)
     UDPClientSocket.sendto(bytesToSend, ingressAddressPort)
     UDPClientSocket.settimeout(timeout) # Timeout of 30 seconds, would be changed if put into a production environment (as opposed to testing)
 
@@ -71,11 +71,8 @@ def write_file(fileSegments):
         file += segment[segment[protocol_lib.headerLengthIndex]:]
 
     msg = "File received.".format(file)
-    print(msg)
 
     fileName = fileSegments[0]
-    print("First 10 bytes ", fileName[:10])
-    print("Think filename is ", fileName[protocol_lib.numberOfHeaderBytesBase:fileName[protocol_lib.headerLengthIndex]])
     fileName = fileName[protocol_lib.numberOfHeaderBytesBase:fileName[protocol_lib.headerLengthIndex]].decode()
 
     outputFile = open(r"../output/{}".format(fileName), "w")
@@ -87,21 +84,21 @@ def receive_file_segments(UDPClientSocket, fileSegments, totalFileSegmentNumber,
     try:
         while True:
             message = UDPClientSocket.recvfrom(protocol_lib.bufferSize)[0]
-            print("Received something")
-            fileSegments.append(message)
             fileSegmentNumber = message[protocol_lib.partOfFileIndex]
-            receivedSegmentNumbers.append(fileSegmentNumber)
+            if fileSegmentNumber not in receivedSegmentNumbers:
+                fileSegments.append(message)
+                receivedSegmentNumbers.append(fileSegmentNumber)
 
             # If it is the final segment
             if message[protocol_lib.actionSelectorIndex] & protocol_lib.notFinalSegmentMask != protocol_lib.notFinalSegmentMask:
-                totalFileSegmentNumber = fileSegmentNumber
+                totalFileSegmentNumber = fileSegmentNumber+1
 
             if len(fileSegments) == totalFileSegmentNumber:
                 fileSegments.sort(key=totalFileSegmentNumberGet)
+                send_ack(UDPClientSocket)
                 return
 
     except TimeoutError:
-        print("Receiving timed out, trying to receive again")
         receivedSegmentNumbers.sort()
         send_request(receivedSegmentNumbers, UDPClientSocket)
         UDPClientSocket.settimeout(timeout)
@@ -109,6 +106,7 @@ def receive_file_segments(UDPClientSocket, fileSegments, totalFileSegmentNumber,
 
 UDPClientSocket = setup_port()
 send_request([], UDPClientSocket)
+print("Requesting file", chosenFile)
 
 # File segment list, to store file segments while waiting for others to arrive
 fileSegments = []
@@ -117,3 +115,4 @@ receivedSegmentNumbers = []
 
 receive_file_segments(UDPClientSocket, fileSegments, totalFileSegmentNumber, receivedSegmentNumbers)
 write_file(fileSegments)
+print("Received file.")
