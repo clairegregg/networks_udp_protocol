@@ -41,10 +41,6 @@ def message_from_client(message, address, workers, clients, workersInUse, lockWo
 def message_from_worker(message, address, workers, clients, lockWorkers):
     # If message is a declaration from worker
     if message[protocol_lib.actionSelectorIndex] & protocol_lib.declarationMask == protocol_lib.declarationMask:
-        msg = "Worker declared: {}".format(message)
-        IP = "Worker IP address: {}".format(address)
-        print(msg)
-        print(IP)
         lockWorkers.acquire()
         workers.put(address)
         lockWorkers.release()

@@ -3,11 +3,10 @@ import random
 import protocol_lib
 import math
 
-fileNames = ["long_test.txt", "test.txt", "longer_than_buffer_test.txt", "test_image.png", "medium_test_image.png", "large_test_image.png", "test_gif.gif"]
+fileNames = ["test.txt", "test_image.jpg", "long_test.txt",  "longer_than_buffer_test.txt",  "medium_test_image.png"]#, "large_test_image.jpg", "test_video.mp4", "test_gif.gif"]
 ingressAddressPort = ("", protocol_lib.ingressPort)
 timeout = 2
 chosenFile = random.choice(fileNames)
-fileReceived = False
 
 def totalFileSegmentNumberGet(message):
     return message[protocol_lib.partOfFileIndex]
@@ -21,8 +20,6 @@ def write_segments_received(receivedSegmentNumbers, numBytesPartsReceived):
         if i in receivedSegmentNumbers:
             segmentsReceived = segmentsReceived | 0b1
         segmentsReceived = segmentsReceived << 1
-
-    return segmentsReceived.to_bytes(numBytesPartsReceived, 'big')
 
 # send_request sends a file request to ingress
 def send_request(receivedSegmentNumbers, UDPClientSocket):
