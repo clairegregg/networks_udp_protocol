@@ -1,40 +1,77 @@
 import socket
 import protocol_lib
-import multiprocessing
+import time
 
-def send_file(message, address):
+chunk_size = 3
+wait_time = 0.001
+
+def get_parts_received(message):
+    numBytesPartsReceived = message[protocol_lib.bytesOfReceivedPartsIndex]
     headerLength = message[protocol_lib.headerLengthIndex]
-    fileName = message[protocol_lib.numberOfHeaderBytesBase:headerLength] # Gives file name which is after base header and before any other explanatory message
+    partsReceivedBytes = int.from_bytes(message[headerLength:headerLength+numBytesPartsReceived], "big")
+    partsReceived = []
 
-    # Sending a reply to ingress
-    bytesToSend = None
-    with open(fileName.decode(), "rb") as f:
-        bytes_read = f.read()
-        filePart = 0
-        startRead = 0
-        while True:
-            print("Sending part {}".format(filePart))
-            endRead = startRead + protocol_lib.bufferSize-headerLength
+    for i in reversed(range((numBytesPartsReceived * 8))):
+        if partsReceivedBytes & 0b1 == 0b1:
+            partsReceived.append(i)
+        partsReceivedBytes  = partsReceivedBytes >> 1
+    return partsReceived
 
-            # If this is the final segment
-            if endRead > len(bytes_read):
-                endRead = len(bytes_read)-1
-                # Ensure notFinalSegment bit not set to represent that this is the final segment
-                bytesToSend = (protocol_lib.baseHeaderBuild(headerLength, protocol_lib.fromWorkerMask,
-                message[protocol_lib.clientIndex]))
-                send = bytesToSend + filePart.to_bytes(1, 'big') + fileName + bytes_read[startRead:endRead]
-                UDPWorkerSocket.sendto(send, ingressAddressPort)
-                break
+def send_file(currentFileName, currentFile, client, UDPWorkerSocket, partsReceived):
+    numFilesSentInChunk = 0
+    for partIndex in range(len(currentFile)):
+        # Leave gap after sending certain number of files to have greater chance of them being received
+        if numFilesSentInChunk >= chunk_size:
+            time.sleep(wait_time)
+            numFilesSentInChunk = 0
 
-            # Set notFinalSegment bit to represent that there are more segments of this file to come
-            bytesToSend = (protocol_lib.baseHeaderBuild(headerLength, protocol_lib.fromWorkerMask|protocol_lib.notFinalSegmentMask,
-            message[protocol_lib.clientIndex]))
-            send = bytesToSend + filePart.to_bytes(1, 'big') + fileName + bytes_read[startRead:endRead]
-            UDPWorkerSocket.sendto(send, ingressAddressPort)
-            startRead = endRead
-            filePart += 1
+        # Do not send a segment which has been received again
+        if partIndex in partsReceived:
+            continue
+        if partIndex == len(currentFile)-1:
+            actionByte = protocol_lib.fromWorkerMask
+        else:
+            actionByte = protocol_lib.fromWorkerMask|protocol_lib.notFinalSegmentMask
+        bytesToSend = (
+            protocol_lib.baseHeaderBuild(protocol_lib.numberOfHeaderBytesBase+len(currentFileName), actionByte, client)
+            + partIndex.to_bytes(1, 'big')
+            + str.encode(currentFileName)
+            + currentFile[partIndex]
+        )
+
+        UDPWorkerSocket.sendto(bytesToSend, ingressAddressPort)
+        numFilesSentInChunk += 1
+
+def get_file(message, currentFileName, currentFile):
+    headerLength = message[protocol_lib.headerLengthIndex]
+    
+    headerAndReceivedLength = protocol_lib.numberOfHeaderBytesRequest + (message[protocol_lib.bytesOfReceivedPartsIndex])
+    fileName = message[protocol_lib.numberOfHeaderBytesRequest:headerLength].decode()
+    if fileName == currentFileName:
+        return currentFileName, currentFile
+    else:
+        currentFile = []
+        with open(fileName, "rb") as f:
+            bytes_read = f.read()
+            filePart = 0
+            startRead = 0
+            while True:
+                endRead = startRead + protocol_lib.bufferSize-headerLength
+
+                # If this is the final segment
+                if endRead > len(bytes_read):
+                    endRead = len(bytes_read)-1
+                    currentFile.append(bytes_read[startRead:endRead])
+                    break
+                currentFile.append(bytes_read[startRead:endRead])
+                startRead = endRead
+                filePart += 1
+        return (fileName, currentFile)
+
 
 ingressAddressPort = ("", protocol_lib.ingressPort)
+currentFileName = ""
+currentFile = []
 
 # Create a UDP socket
 UDPWorkerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
@@ -52,10 +89,7 @@ while True:
     bytesAddressPair = UDPWorkerSocket.recvfrom(protocol_lib.bufferSize)
     message = bytesAddressPair[0]
     address = bytesAddressPair[1]
-    msgFromIngress = "Message from ingress: {}".format(message)
-    ingressIP = "Ingress IP address: {}".format(address)
-    print(msgFromIngress)
-    print(ingressIP)
-
-    process = multiprocessing.Process(target=send_file, args=(message,address))
-    process.start()
+    currentFileName, currentFile = get_file(message, currentFileName, currentFile)
+    partsReceived = get_parts_received(message)
+    client = message[protocol_lib.clientIndex]
+    send_file(currentFileName, currentFile, client, UDPWorkerSocket, partsReceived)
