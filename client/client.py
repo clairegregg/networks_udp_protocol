@@ -3,7 +3,8 @@ import random
 import protocol_lib
 import math
 
-fileNames = ["test.txt", "test_image.jpg", "long_test.txt",  "longer_than_buffer_test.txt",  "medium_test_image.png"]#, "large_test_image.jpg", "test_video.mp4", "test_gif.gif"]
+# 
+fileNames = ["test.txt", "test_image.jpg", "long_test.txt",  "longer_than_buffer_test.txt",  "medium_test_image.png", "large_test_image.jpg", "test_video.mp4", "test_gif.gif"]
 ingressAddressPort = ("", protocol_lib.ingressPort)
 timeout = 2
 chosenFile = random.choice(fileNames)
@@ -20,30 +21,32 @@ def write_segments_received(receivedSegmentNumbers, numBytesPartsReceived):
         if i in receivedSegmentNumbers:
             segmentsReceived = segmentsReceived | 0b1
         segmentsReceived = segmentsReceived << 1
+    return segmentsReceived.to_bytes(numBytesPartsReceived, 'big')
 
 # send_request sends a file request to ingress
 def send_request(receivedSegmentNumbers, UDPClientSocket):
-    if len(receivedSegmentNumbers) == 0:
-        numBytesPartsReceived = protocol_lib.noPartsReceived.to_bytes(1, 'big')
-        partsReceived = None
+    # If you have not received any sections, or this is the first request
+    partsReceived = 0
+    if len(receivedSegmentNumbers) <= 0:
+        numBytesPartsReceived = protocol_lib.noPartsReceived
     else:
         # Number of bytes it will take to encode the parts which have been received
         numBytesPartsReceived = math.ceil(max(receivedSegmentNumbers) / 8)
         partsReceived = write_segments_received(receivedSegmentNumbers, numBytesPartsReceived)
-        numBytesPartsReceived = numBytesPartsReceived.to_bytes(1, 'big')
+
 
     bytesToSend = (
-        protocol_lib.baseHeaderBuild(protocol_lib.numberOfHeaderBytesRequest + len(chosenFile),
+        protocol_lib.baseHeaderBuild(
+            protocol_lib.numberOfHeaderBytesRequest + len(chosenFile),
             (protocol_lib.fromClientMask | protocol_lib.requestMask),
-            protocol_lib.noClientSelected)
-        + protocol_lib.noFileSegment.to_bytes(1, 'big')
-        + numBytesPartsReceived
+            protocol_lib.noClientSelected, protocol_lib.noFileSegment
+        )
+        + numBytesPartsReceived.to_bytes(1, 'big')
+        + str.encode(chosenFile)
     )
-    bytesToSend += str.encode(chosenFile)
-    if partsReceived != None:
+    if len(receivedSegmentNumbers) > 0:
         bytesToSend += partsReceived
 
-    bytesToSend += str.encode("Client requesting file")
     # Send to server using UDP socket
     UDPClientSocket.sendto(bytesToSend, ingressAddressPort)
     UDPClientSocket.settimeout(timeout) # Timeout of 30 seconds, would be changed if put into a production environment (as opposed to testing)
@@ -51,14 +54,11 @@ def send_request(receivedSegmentNumbers, UDPClientSocket):
 def send_ack(UDPClientSocket):
     bytesToSend = protocol_lib.baseHeaderBuild(protocol_lib.numberOfHeaderBytesBase,
         (protocol_lib.fromClientMask | protocol_lib.fileAckMask),
-        protocol_lib.noClientSelected)
+        protocol_lib.noClientSelected, protocol_lib.noFileSegment)
     UDPClientSocket.sendto(bytesToSend, ingressAddressPort)
     UDPClientSocket.settimeout(None)
 
 def setup_port():
-    # Empty IP number, assigned by Docker
-    ingressAddressPort = ("", protocol_lib.ingressPort)
-    # Create a UDP socket
     UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
     return UDPClientSocket
 
@@ -97,10 +97,14 @@ def receive_file_segments(UDPClientSocket, fileSegments, totalFileSegmentNumber,
 
     except TimeoutError:
         receivedSegmentNumbers.sort()
+
         send_request(receivedSegmentNumbers, UDPClientSocket)
         UDPClientSocket.settimeout(timeout)
         receive_file_segments(UDPClientSocket, fileSegments, totalFileSegmentNumber, receivedSegmentNumbers)
 
+##################################
+###### Main part of program ######
+##################################
 UDPClientSocket = setup_port()
 send_request([], UDPClientSocket)
 print("Requesting file", chosenFile)

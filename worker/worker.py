@@ -3,7 +3,7 @@ import protocol_lib
 import time
 
 chunk_size = 3
-wait_time = 0.001
+wait_time = 0.005
 
 def get_parts_received(message):
     numBytesPartsReceived = message[protocol_lib.bytesOfReceivedPartsIndex]
@@ -33,12 +33,10 @@ def send_file(currentFileName, currentFile, client, UDPWorkerSocket, partsReceiv
         else:
             actionByte = protocol_lib.fromWorkerMask|protocol_lib.notFinalSegmentMask
         bytesToSend = (
-            protocol_lib.baseHeaderBuild(protocol_lib.numberOfHeaderBytesBase+len(currentFileName), actionByte, client)
-            + partIndex.to_bytes(1, 'big')
+            protocol_lib.baseHeaderBuild(protocol_lib.numberOfHeaderBytesBase+len(currentFileName), actionByte, client, partIndex)
             + str.encode(currentFileName)
             + currentFile[partIndex]
         )
-
         UDPWorkerSocket.sendto(bytesToSend, ingressAddressPort)
         numFilesSentInChunk += 1
 
@@ -77,8 +75,7 @@ currentFile = []
 UDPWorkerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
 # Declare worker
-bytesToSend = (protocol_lib.baseHeaderBuild(protocol_lib.numberOfHeaderBytesBase, (protocol_lib.declarationMask|protocol_lib.fromWorkerMask), protocol_lib.noClientSelected)
-    + protocol_lib.noFileSegment.to_bytes(1, 'big')
+bytesToSend = (protocol_lib.baseHeaderBuild(protocol_lib.numberOfHeaderBytesBase, (protocol_lib.declarationMask|protocol_lib.fromWorkerMask), protocol_lib.noClientSelected, protocol_lib.noFileSegment)
     + str.encode("Worker declaring itself to ingress"))
 UDPWorkerSocket.sendto(bytesToSend, ingressAddressPort)
 
