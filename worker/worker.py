@@ -19,7 +19,7 @@ currentFile = []
 # Read which parts a client has received from its header.
 def get_parts_received(message):
     # Get values from header
-    numBytesPartsReceived = message[protocol_lib.bytesOfReceivedPartsIndex]
+    numBytesPartsReceived = protocol_lib.getReceivedPartsBytes(message)
     headerLength = message[protocol_lib.headerLengthIndex]
     partsReceivedBytes = int.from_bytes(message[headerLength:headerLength+numBytesPartsReceived], "big")
     partsReceived = []

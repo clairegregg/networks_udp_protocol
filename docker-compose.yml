@@ -33,6 +33,19 @@ services:
     deploy:
       mode: replicated
       replicas: 10
+  
+  interactive_client:
+    build:
+      dockerfile: 
+        interactive_client/Dockerfile
+    network_mode: "host"
+    volumes:
+      - ./interactive_output:/interactive_output
+    depends_on:
+      - ingress
+      - worker
+    stdin_open: true
+    tty: true
 
   tcpdump:
     image: kaazing/tcpdump

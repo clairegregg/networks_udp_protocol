@@ -14,9 +14,6 @@ ingressAddressPort = ("", protocol_lib.ingressPort)
 # Port timeout (in seconds). Can only be this low as it is in testing.
 timeout = 2
 
-# Choose the file from the list for testing.
-chosenFile = random.choice(fileNames)
-
 # Function to give a key for sorting file segments.
 def totalFileSegmentNumberGet(message):
     return int.from_bytes(message[protocol_lib.partOfFileStartIndex:protocol_lib.partOfFileStartIndex+protocol_lib.numberOfFilePartBytes], 'big')
@@ -83,8 +80,8 @@ def write_file(fileSegments):
     fileName = fileSegments[0]
     fileName = fileName[protocol_lib.numberOfHeaderBytesBase:fileName[protocol_lib.headerLengthIndex]].decode()
 
-    outputFile = open(r"../output/{}".format(fileName), "w")
-    outputFile = open(r"../output/{}".format(fileName), "wb")
+    outputFile = open(r"../interactive_output/{}".format(fileName), "w")
+    outputFile = open(r"../interactive_output/{}".format(fileName), "wb")
     outputFile.write(file)
     outputFile.close()
 
@@ -123,14 +120,23 @@ def receive_file_segments(UDPClientSocket, fileSegments, totalFileSegmentNumber,
 ###### Main part of program ######
 ##################################
 UDPClientSocket = setup_port()
-send_request([], UDPClientSocket)
-print("Requesting file", chosenFile)
+global chosenFile
+while True:
+    # Choose the file 
+    chosenFile = input("Please select a file to request or 'exit' if you are finished: ")
+    if chosenFile == "exit":
+        break
+    if chosenFile not in fileNames:
+        print("Sorry, that file is not available.")
+        continue
+    send_request([], UDPClientSocket)
+    print("Requesting file", chosenFile)
 
-# File segment list, to store file segments while waiting for others to arrive
-fileSegments = []
-totalFileSegmentNumber = -1
-receivedSegmentNumbers = []
+    # File segment list, to store file segments while waiting for others to arrive
+    fileSegments = []
+    totalFileSegmentNumber = -1
+    receivedSegmentNumbers = []
 
-receive_file_segments(UDPClientSocket, fileSegments, totalFileSegmentNumber, receivedSegmentNumbers)
-write_file(fileSegments)
-print("Received file.")
+    receive_file_segments(UDPClientSocket, fileSegments, totalFileSegmentNumber, receivedSegmentNumbers)
+    write_file(fileSegments)
+    print("Received file.")
