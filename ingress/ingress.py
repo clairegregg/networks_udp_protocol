@@ -14,7 +14,7 @@ def message_from_client(message, address, workers, clients, workersInUse, lockWo
         clientIndex = len(clients)-1
 
     # If the file has been successfully received, add worker back to main queue
-    if message[protocol_lib.actionSelectorIndex] & protocol_lib.fileAckMask == protocol_lib.fileAckMask:
+    if message[protocol_lib.controlIndex] & protocol_lib.fileAckMask == protocol_lib.fileAckMask:
         lockWorkersInUse.acquire()
         worker = workersInUse.pop(clientIndex)
         lockWorkersInUse.release()
@@ -40,7 +40,7 @@ def message_from_client(message, address, workers, clients, workersInUse, lockWo
 # Actions if the message is from a worker
 def message_from_worker(message, address, workers, clients, lockWorkers):
     # If message is a declaration from worker
-    if message[protocol_lib.actionSelectorIndex] & protocol_lib.declarationMask == protocol_lib.declarationMask:
+    if message[protocol_lib.controlIndex] & protocol_lib.declarationMask == protocol_lib.declarationMask:
         lockWorkers.acquire()
         workers.put(address)
         lockWorkers.release()
@@ -57,11 +57,11 @@ def deal_with_recv(bytesAddressPair, workers, clients, workersInUse, lockWorkers
     address = bytesAddressPair[1]
 
     # if message is from client
-    if message[protocol_lib.actionSelectorIndex] & protocol_lib.fromClientMask == protocol_lib.fromClientMask:
+    if message[protocol_lib.controlIndex] & protocol_lib.fromClientMask == protocol_lib.fromClientMask:
         message_from_client(message, address, workers, clients, workersInUse, lockWorkers, lockClients, lockWorkersInUse)
 
     # if message is from worker
-    elif message[protocol_lib.actionSelectorIndex] & protocol_lib.fromWorkerMask == protocol_lib.fromWorkerMask:
+    elif message[protocol_lib.controlIndex] & protocol_lib.fromWorkerMask == protocol_lib.fromWorkerMask:
         message_from_worker(message, address, workers, clients, lockWorkers)
 
 

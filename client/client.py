@@ -103,7 +103,7 @@ def receive_file_segments(UDPClientSocket, fileSegments, totalFileSegmentNumber,
                 receivedSegmentNumbers.append(fileSegmentNumber)
 
             # If it is the final segment, store the total number of segments
-            if message[protocol_lib.actionSelectorIndex] & protocol_lib.notFinalSegmentMask != protocol_lib.notFinalSegmentMask:
+            if message[protocol_lib.controlIndex] & protocol_lib.notFinalSegmentMask != protocol_lib.notFinalSegmentMask:
                 totalFileSegmentNumber = fileSegmentNumber+1
 
             # If all file segments have arrived, return

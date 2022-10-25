@@ -1,4 +1,4 @@
-# Masks for Action bit of header
+# Masks for Control bit of header
 declarationMask     = 0b1
 fromWorkerMask      = 0b10
 fromClientMask      = 0b100
@@ -11,7 +11,7 @@ numberOfFilePartBytes = 2
 
 # Indices of sections of the header
 headerLengthIndex       = 0
-actionSelectorIndex     = 1
+controlIndex     = 1
 clientIndex             = 2
 partOfFileStartIndex      = 3
 bytesOfReceivedPartsStartIndex = partOfFileStartIndex + numberOfFilePartBytes # This only applies if the request mask is set
@@ -32,5 +32,5 @@ def getFilePart(msg):
 def getReceivedPartsBytes(msg):
     return int.from_bytes(msg[bytesOfReceivedPartsStartIndex:bytesOfReceivedPartsStartIndex+numberOfFilePartBytes], 'big')
 
-def baseHeaderBuild(length, actionSelector, client, partIndex):
-    return length.to_bytes(1, 'big') + actionSelector.to_bytes(1, 'big') + client.to_bytes(1, 'big') + partIndex.to_bytes(numberOfFilePartBytes, 'big')
+def baseHeaderBuild(length, control, client, partIndex):
+    return length.to_bytes(1, 'big') + control.to_bytes(1, 'big') + client.to_bytes(1, 'big') + partIndex.to_bytes(numberOfFilePartBytes, 'big')

@@ -48,15 +48,15 @@ def send_file(currentFileName, currentFile, client, UDPWorkerSocket, partsReceiv
 
         # If it is the last segment
         if partIndex == len(currentFile)-1:
-            actionByte = protocol_lib.fromWorkerMask
+            control = protocol_lib.fromWorkerMask
         else:
-            actionByte = protocol_lib.fromWorkerMask|protocol_lib.notFinalSegmentMask
+            control = protocol_lib.fromWorkerMask|protocol_lib.notFinalSegmentMask
         
         # Create the header and send the file
         bytesToSend = (
             protocol_lib.baseHeaderBuild(
                 protocol_lib.numberOfHeaderBytesBase+len(currentFileName), 
-                actionByte, 
+                control, 
                 client, 
                 partIndex
             )
