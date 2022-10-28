@@ -1,3 +1,5 @@
+# Author: Claire Gregg
+
 # Masks for Control bit of header
 declarationMask     = 0b1
 fromWorkerMask      = 0b10
@@ -11,7 +13,7 @@ numberOfFilePartBytes = 2
 
 # Indices of sections of the header
 headerLengthIndex       = 0
-controlIndex     = 1
+controlIndex            = 1
 clientIndex             = 2
 partOfFileStartIndex      = 3
 bytesOfReceivedPartsStartIndex = partOfFileStartIndex + numberOfFilePartBytes # This only applies if the request mask is set

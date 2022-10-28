@@ -1,3 +1,5 @@
+# Author: Claire Gregg
+
 FROM python:latest
 
 ADD ingress/ingress.py /ingress/

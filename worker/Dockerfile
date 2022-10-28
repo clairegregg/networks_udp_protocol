@@ -1,3 +1,5 @@
+# Author: Claire Gregg
+
 FROM python:latest
 
 ADD worker/worker.py /worker/

@@ -1,3 +1,5 @@
+# Author: Claire Gregg
+
 import socket
 import random
 import protocol_lib

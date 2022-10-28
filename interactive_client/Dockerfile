@@ -1,3 +1,4 @@
+# Author: Claire Gregg
 
 FROM python:latest
 

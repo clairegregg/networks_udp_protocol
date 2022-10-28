@@ -1,3 +1,5 @@
+# Author: Claire Gregg
+
 import socket
 import protocol_lib
 import multiprocessing
